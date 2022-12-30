@@ -15,6 +15,9 @@ import {
 } from "matrix-bot-sdk";
 import config from "./config";
 import * as path from "path";
+import { read as readRss } from "@extractus/feed-extractor";
+import { RssHandler } from "./rss";
+import * as sanitizeHtml from "sanitize-html";
 
 LogService.setLevel(LogLevel.TRACE);
 LogService.setLogger(new RichConsoleLogger());
@@ -22,6 +25,7 @@ LogService.muteModule("Metrics");
 LogService.trace = LogService.debug;
 
 let appservice: Appservice;
+let rss: RssHandler;
 
 (async function() {
     const tempClient = new MatrixClient(config.homeserver.url, config.homeserver.asToken);
@@ -54,9 +58,10 @@ let appservice: Appservice;
     };
 
     appservice = new Appservice(options);
+    rss = new RssHandler(appservice);
     AutojoinRoomsMixin.setupOnAppservice(appservice);
     appservice.begin().then(() => LogService.info("index", "Appservice started"));
-    appservice.on("room.message", (roomId, event) => {
+    appservice.on("room.message", async (roomId, event) => {
         if (event.type !== "m.room.message") return; // TODO: Extensible events
         if (event.content.msgtype !== "m.text") return;
         if (!event.content.body || !event.content.body.trim().startsWith("!rss")) return;
@@ -65,16 +70,21 @@ let appservice: Appservice;
         const command = parts[1]?.toLowerCase();
         const url = parts[2];
 
+        await appservice.botClient.sendReadReceipt(roomId, event.event_id);
+
         switch(command) {
             case "subscribe":
                 return trySubscribe(roomId, event, url);
             case "unsubscribe":
                 return tryUnsubscribe(roomId, event, url);
             case "subscriptions":
-                return tryListSubscriptions(roomId, event, url);
+                return tryListSubscriptions(roomId, event);
             default:
                 return tryHelp(roomId, event);
         }
+    });
+    appservice.on("room.join", (roomId) => {
+        return rss.reloadRoom(roomId);
     });
 })();
 
@@ -87,19 +97,41 @@ async function trySubscribe(roomId: string, event: any, url: string) {
         return appservice.botClient.replyHtmlNotice(roomId, event, `<b>You do not have permission to run this command.</b>Please ask a room moderator to perform it instead.`);
     }
 
+    try {
+        const result = await readRss(url, { includeEntryContent: false });
+        await rss.subscribe(roomId, url);
+        await reactTo(roomId, event, '✅');
+        await rss.sendEntryTo(result, result.entries[0], roomId);
+    } catch (e) {
+        LogService.error("index", e);
+        return appservice.botClient.replyHtmlNotice(roomId, event, `<b>There was an error handling your RSS subscription.</b><br/>Is the URL a valid RSS, Atom, or JSON feed?`);
+    }
 }
 
 async function tryUnsubscribe(roomId: string,  event: any, url: string) {
     if (!(await checkPower(roomId, event.sender))) {
         return appservice.botClient.replyHtmlNotice(roomId, event, `<b>You do not have permission to run this command.</b>Please ask a room moderator to perform it instead.`);
     }
-
+    await rss.unsubscribe(roomId, url);
+    await reactTo(roomId, event, '✅');
 }
 
-async function tryListSubscriptions(roomId: string, event: any, url: string) {
-
+async function tryListSubscriptions(roomId: string, event: any) {
+    const urls = await rss.subscriptionsFor(roomId);
+    if (!urls || !urls.length) return appservice.botClient.replyHtmlNotice(roomId, event, `No subscriptions.`);
+    return appservice.botClient.replyHtmlNotice(roomId, event, `Subscriptions:<ul><li>${urls.map(u => sanitizeHtml(u)).join(`</li><li>`)}</li>`);
 }
 
 async function tryHelp(roomId: string, event: any) {
     await appservice.botClient.replyHtmlNotice(roomId, event, `<b>RSS Bot Help</b><br/>Commands:<ul><li><code>!rss subscribe &lt;url&gt;</code> - Subscribe to a feed.</li><li><code>!rss unsubscribe &lt;url&gt;</code> - Unsubscribe from a feed.</li><li><code>!rss subscriptions</code> - List all subscribed feed URLs.</li></ul>`);
+}
+
+function reactTo(roomId: string, event: any, reaction: string): Promise<unknown> {
+    return appservice.botClient.sendRawEvent(roomId, "m.reaction", {
+        "m.relates_to": {
+            event_id: event.event_id,
+            key: reaction,
+            rel_type: "m.annotation",
+        },
+    });
 }
