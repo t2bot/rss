@@ -18,6 +18,7 @@ import * as path from "path";
 import { read as readRss } from "@extractus/feed-extractor";
 import { RssHandler } from "./rss";
 import * as sanitizeHtml from "sanitize-html";
+import { Database } from "./db";
 
 LogService.setLevel(LogLevel.TRACE);
 LogService.setLogger(new RichConsoleLogger());
@@ -26,6 +27,7 @@ LogService.trace = LogService.debug;
 
 let appservice: Appservice;
 let rss: RssHandler;
+let db: Database;
 
 (async function() {
     const tempClient = new MatrixClient(config.homeserver.url, config.homeserver.asToken);
@@ -58,7 +60,8 @@ let rss: RssHandler;
     };
 
     appservice = new Appservice(options);
-    rss = new RssHandler(appservice);
+    db = new Database(config.bot.storagePath);
+    rss = new RssHandler(appservice, db, config.rss.updateMs);
     AutojoinRoomsMixin.setupOnAppservice(appservice);
     appservice.begin().then(() => LogService.info("index", "Appservice started"));
     appservice.on("room.message", async (roomId, event) => {
@@ -83,9 +86,9 @@ let rss: RssHandler;
                 return tryHelp(roomId, event);
         }
     });
-    appservice.on("room.join", (roomId) => {
-        return rss.reloadRoom(roomId);
-    });
+
+    // cheat to cause encryption to update immediately
+    appservice.botIntent.enableEncryption().then(() => LogService.info("index", "Encryption prepared"));
 })();
 
 function checkPower(roomId: string, sender: string): Promise<boolean> {
@@ -98,10 +101,9 @@ async function trySubscribe(roomId: string, event: any, url: string) {
     }
 
     try {
-        const result = await readRss(url, { includeEntryContent: false });
+        await readRss(url, { includeEntryContent: false }); // validate feed
         await rss.subscribe(roomId, url);
         await reactTo(roomId, event, '✅');
-        await rss.sendEntryTo(result, result.entries[0], roomId);
     } catch (e) {
         LogService.error("index", e);
         return appservice.botClient.replyHtmlNotice(roomId, event, `<b>There was an error handling your RSS subscription.</b><br/>Is the URL a valid RSS, Atom, or JSON feed?`);

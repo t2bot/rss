@@ -11,6 +11,9 @@ interface IConfig {
         hsToken: string;
         storagePath: string;
     };
+    rss: {
+        updateMs: number;
+    };
 }
 
 export default <IConfig>config;

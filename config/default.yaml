@@ -12,6 +12,10 @@ bot:
   hsToken: CHANGE_ME
   storagePath: "./storage"
 
+rss:
+  # How often to update feeds in milliseconds.
+  updateMs: 600000 # 10 minutes
+
 # Note: You will also need to set up an appservice with your homeserver. A sample YAML file is:
 #id: rssbot
 #hs_token: THE_HSTOKEN_FROM_ABOVE
