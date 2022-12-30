@@ -1,0 +1,27 @@
+# RSS Config
+
+# Homeserver information (bot -> matrix)
+homeserver:
+  url: https://matrix-client.matrix.org
+  asToken: CHANGE_ME
+
+# Bot information (matrix -> bot)
+bot:
+  bindAddress: "0.0.0.0"
+  bindPort: 9000
+  hsToken: CHANGE_ME
+  storagePath: "./storage"
+
+# Note: You will also need to set up an appservice with your homeserver. A sample YAML file is:
+#id: rssbot
+#hs_token: THE_HSTOKEN_FROM_ABOVE
+#as_token: THE_ASTOKEN_FROM_ABOVE
+#namespaces:
+#  users: []
+#  aliases: []
+#  rooms: []
+#url: "https://url.to.your.bot"
+#sender_localpart: "rss"  # This will become "@rss:example.org"
+#rate_limited: false
+#de.sorunome.msc2409.push_ephemeral: true
+#org.matrix.msc3202: true

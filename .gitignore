@@ -1,3 +1,11 @@
+# Custom
+config/*
+!config/default.yaml
+/node_modules/
+/lib/
+/storage/
+.idea/
+
 # Logs
 logs
 *.log

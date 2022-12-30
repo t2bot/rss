@@ -1,0 +1,29 @@
+{
+  "name": "rss",
+  "version": "1.0.0",
+  "description": "https://t2bot.io/rssbot",
+  "main": "lib/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run-script build && node ./lib/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/t2bot/rss.git"
+  },
+  "author": "t2bot.io",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/t2bot/rss/issues"
+  },
+  "homepage": "https://github.com/t2bot/rss#readme",
+  "devDependencies": {
+    "@types/node": "^18.11.18",
+    "typescript": "^4.9.4"
+  },
+  "dependencies": {
+    "config": "^3.3.8",
+    "js-yaml": "^4.1.0",
+    "matrix-bot-sdk": "^0.6.3"
+  }
+}
