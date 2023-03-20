@@ -15,7 +15,7 @@ import {
 } from "matrix-bot-sdk";
 import config from "./config";
 import * as path from "path";
-import { read as readRss } from "@extractus/feed-extractor";
+import { extract as readRss } from "@extractus/feed-extractor";
 import { RssHandler } from "./rss";
 import * as sanitizeHtml from "sanitize-html";
 import { Database } from "./db";
@@ -65,6 +65,7 @@ let db: Database;
     AutojoinRoomsMixin.setupOnAppservice(appservice);
     appservice.begin().then(() => LogService.info("index", "Appservice started"));
     appservice.on("room.message", async (roomId, event) => {
+        if (event.sender === botUser.toString()) return;
         if (event.type !== "m.room.message") return; // TODO: Extensible events
         if (event.content.msgtype !== "m.text") return;
         if (!event.content.body || !event.content.body.trim().startsWith("!rss")) return;
@@ -101,7 +102,7 @@ async function trySubscribe(roomId: string, event: any, url: string) {
     }
 
     try {
-        await readRss(url, { includeEntryContent: false }); // validate feed
+        await readRss(url); // validate feed
         await rss.subscribe(roomId, url);
         await reactTo(roomId, event, '✅');
     } catch (e) {

@@ -1,5 +1,5 @@
 import { Appservice, LogService } from "matrix-bot-sdk";
-import { FeedData, FeedEntry, read as readRss } from "@extractus/feed-extractor";
+import { FeedData, FeedEntry, extract as readRss } from "@extractus/feed-extractor";
 import * as sanitizeHtml from "sanitize-html";
 import { Database } from "./db";
 
@@ -24,7 +24,7 @@ export class RssHandler {
                 for (const [url, roomIds] of urlsToRooms.entries()) {
                     try {
                         LogService.info("RSS", `Querying ${url} for ${roomIds.size} rooms`);
-                        const feedData = await readRss(url, { includeEntryContent: false });
+                        const feedData = await readRss(url);
                         const knownEntries = new Set<string>(await this.db.getKnownEntries(url));
 
                         const entryIds = new Set<string>();
@@ -69,9 +69,9 @@ export class RssHandler {
     }
 
     public async sendEntryTo(feed: FeedData, entry: FeedEntry, roomId: string) {
-        const name = feed.link ? `<a href="${encodeURIComponent(feed.link)}">${sanitizeHtml(feed.title ?? "Unknown Feed")}</a>` : sanitizeHtml(feed.title ?? "Unknown Feed");
-        const title = entry.link ? `<a href="${encodeURIComponent(entry.link)}">${sanitizeHtml(entry.title ?? "Unknown Post")}</a>` : sanitizeHtml(entry.title ?? "Unknown Post");
+        const name = feed.link ? `<a href="${encodeURI(feed.link)}">${sanitizeHtml(feed.title ?? "Unknown Feed")}</a>` : sanitizeHtml(feed.title ?? "Unknown Feed");
+        const title = entry.link ? `<a href="${encodeURI(entry.link)}">${sanitizeHtml(entry.title ?? "Unknown Post")}</a>` : sanitizeHtml(entry.title ?? "Unknown Post");
         const template = `New post in ${name}: <b>${title}</b>`;
-        await this.appservice.botClient.sendHtmlNotice(roomId, template);
+        await this.appservice.botClient.sendHtmlText(roomId, template);
     }
 }
