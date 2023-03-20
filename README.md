@@ -24,5 +24,5 @@ npm run start
 Copy and edit `config/default.yaml` then use something similar to the following:
 
 ```bash
-docker run --restart=always -d --name rss -v /path/to/config.yaml:/app/config/production.yaml -v /path/to/storage:/data ghcr.io/t2bot/rss:main
+docker run --restart=always -d --name rss -v /path/to/config.yaml:/app/config/production.yaml -v /path/to/storage:/data -p 8080:9000 ghcr.io/t2bot/rss:main
 ```
