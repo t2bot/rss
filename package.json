@@ -27,7 +27,7 @@
     "async-lock": "^1.4.0",
     "config": "^3.3.9",
     "js-yaml": "^4.1.0",
-    "matrix-bot-sdk": "^0.6.3",
+    "matrix-bot-sdk": "^0.6.4",
     "sanitize-html": "^2.10.0",
     "sqlite3": "^5.1.6"
   }
